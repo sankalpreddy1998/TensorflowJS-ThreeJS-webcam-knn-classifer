@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>My first three.js app</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 40%; height: 40% }
+        </style>
+        
+	</head>
+	<body>
+        <div id="console"></div>
+        <video autoplay playsinline muted id="webcam" width="224" height="224"></video>
+        <button id="class-up">up</button>
+        <button id="class-left">left</button>
+        <button id="class-right">right</button>
+
+
+        <script src="https://unpkg.com/@tensorflow/tfjs"></script>
+        <script src="https://unpkg.com/@tensorflow-models/mobilenet"></script>
+        <script src="https://unpkg.com/@tensorflow-models/knn-classifier"></script>
+		<script src="js/three.js"></script>
+		<script>
+
+
+            const webcamElement = document.getElementById('webcam');
+            const classifier = knnClassifier.create();
+            async function setupWebcam() {
+                return new Promise((resolve, reject) => {
+                    const navigatorAny = navigator;
+                    navigator.getUserMedia = navigator.getUserMedia ||
+                        navigatorAny.webkitGetUserMedia || navigatorAny.mozGetUserMedia ||
+                        navigatorAny.msGetUserMedia;
+                    if (navigator.getUserMedia) {
+                    navigator.getUserMedia({video: true},
+                        stream => {
+                        webcamElement.srcObject = stream;
+                        webcamElement.addEventListener('loadeddata',  () => resolve(), false);
+                        },
+                        error => reject());
+                    } else {
+                    reject();
+                    }
+                });
+            }
+
+
+
+
+
+
+            var scene = new THREE.Scene();
+            var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+
+
+			var renderer = new THREE.WebGLRenderer({antialias: false});
+			renderer.setSize( window.innerWidth/2, window.innerHeight/2 );
+            document.body.appendChild( renderer.domElement );
+            
+            var light1 = new THREE.AmbientLight( 0xffffff , 0.5); // soft white light
+            scene.add( light1 );            
+            var light = new THREE.PointLight( 0xffffff, 0.5 );
+            light.position.set( 50, 50, 50 );
+            scene.add( light );
+            
+
+			var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+			var material = new THREE.MeshLambertMaterial( { color: 0x00ff00 } );
+			var cube = new THREE.Mesh( geometry, material );
+            scene.add( cube );
+            
+			camera.position.z = 2;
+
+            var animate = function (x) {
+				requestAnimationFrame( animate );
+
+				
+					switch (x) {
+					case 'left':
+					cube.rotation.y -= 0.1;
+					break;
+					case 'up':
+					cube.rotation.x -= 0.1;
+					break;
+					case 'right':
+					cube.rotation.y += 0.1;
+					break;
+					
+					}
+				
+
+				renderer.render( scene, camera );
+			};
+
+            async function app() {
+                console.log('Loading mobilenet..');
+
+                // Load the model.
+                net = await mobilenet.load();
+                console.log('Successfully loaded model');
+
+                await setupWebcam();
+
+                // Reads an image from the webcam and associates it with a specific class
+                // index.
+                const addExample = classId => {
+                    // Get the intermediate activation of MobileNet 'conv_preds' and pass that
+                    // to the KNN classifier.
+                    const activation = net.infer(webcamElement, 'conv_preds');
+
+                    // Pass the intermediate activation to the classifier.
+                    classifier.addExample(activation, classId);
+                };
+
+                // When clicking a button, add an example for that class.
+                document.getElementById('class-up').addEventListener('click', () => addExample(0));
+                document.getElementById('class-left').addEventListener('click', () => addExample(1));
+                document.getElementById('class-right').addEventListener('click', () => addExample(2));
+
+                while (true) {
+                    if (classifier.getNumClasses() > 0) {
+                    // Get the activation from mobilenet from the webcam.
+                    const activation = net.infer(webcamElement, 'conv_preds');
+                    // Get the most likely class and confidences from the classifier module.
+                    const result = await classifier.predictClass(activation);
+
+                    const classes = [ 'up', 'left','right'];
+                    // document.getElementById('console').innerText = `
+                    //     prediction: ${classes[result.classIndex]}\n
+                    // `;
+                    
+                    animate(classes[result.classIndex]);
+                    
+                    }
+
+                    
+                    await tf.nextFrame();
+                }
+            }
+
+            app();
+
+		</script>
+	</body>
+</html>

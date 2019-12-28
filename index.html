@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>My first three.js app</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+	</head>
+	<body>
+		<script src="js/three.js"></script>
+		<script>
+            var scene = new THREE.Scene();
+            var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+
+
+			var renderer = new THREE.WebGLRenderer({antialias: true});
+			renderer.setSize( window.innerWidth, window.innerHeight );
+            document.body.appendChild( renderer.domElement );
+            
+            var light1 = new THREE.AmbientLight( 0xffffff , 0.5); // soft white light
+            scene.add( light1 );            
+            var light = new THREE.PointLight( 0xffffff, 0.5 );
+            light.position.set( 50, 50, 50 );
+            scene.add( light );
+            
+
+			var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+			var material = new THREE.MeshLambertMaterial( { color: 0x00ff00 } );
+			var cube = new THREE.Mesh( geometry, material );
+            scene.add( cube );
+            
+			camera.position.z = 2;
+
+			var animate = function (e) {
+				requestAnimationFrame( animate );
+
+				document.onkeydown = function(e) {
+					switch (e.keyCode) {
+					case 37:
+					cube.rotation.y -= 0.1;
+					break;
+					case 38:
+					cube.rotation.x -= 0.1;
+					break;
+					case 39:
+					cube.rotation.y += 0.1;
+					break;
+					case 40:
+					cube.rotation.x += 0.1;
+					break;
+					}
+				};
+
+				renderer.render( scene, camera );
+			};
+
+			animate();
+		</script>
+	</body>
+</html>
